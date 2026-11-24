@@ -40,7 +40,7 @@ Get the latest **`VocalTuner-win-x64.zip`** from the [Releases page](../../relea
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```powershell
-git clone <this repository's URL>
+git clone https://github.com/cphudit/vocal-tuner.git
 cd vocal-tuner
 dotnet run                                          # debug run
 dotnet publish -c Release -o dist\VocalTuner        # self-contained build in dist\VocalTuner
