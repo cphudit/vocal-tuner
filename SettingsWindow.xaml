@@ -1,0 +1,91 @@
+<Window x:Class="VocalTuner.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:VocalTuner"
+        Title="Settings" Width="640" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource Surface}" Foreground="{DynamicResource Text}"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderB}" Padding="20,14">
+      <Button x:Name="DoneBtn" Style="{StaticResource Pill}" Content="Done" HorizontalAlignment="Right" Padding="22,8" FontSize="13" IsDefault="True"/>
+    </Border>
+    <ScrollViewer x:Name="Body" VerticalScrollBarVisibility="Auto" MaxHeight="720" Focusable="False">
+      <StackPanel Margin="28,8,28,6">
+
+        <!-- Recording setup -->
+        <StackPanel x:Name="SetupSec" Margin="0,16,0,20">
+          <TextBlock Text="RECORDING SETUP" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Sub}" Margin="0,0,0,10"/>
+          <StackPanel x:Name="SetupRows">
+            <DockPanel Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Microphone"/>
+              <local:Dropdown x:Name="MicSel"/>
+            </DockPanel>
+            <DockPanel x:Name="OutRow" Margin="0,5">
+              <TextBlock x:Name="OutLbl" Style="{StaticResource Label}" Text="Sound output"/>
+              <local:Dropdown x:Name="OutSel" ToolTip="Where the piano, the backing track and take playback are heard"/>
+            </DockPanel>
+            <DockPanel Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Backing track"/>
+              <Border Background="{DynamicResource Muted}" CornerRadius="10" Padding="3" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                  <RadioButton x:Name="ModeNone" Style="{StaticResource Seg}" GroupName="mode" Content="None"/>
+                  <RadioButton x:Name="ModeFile" Style="{StaticResource Seg}" GroupName="mode" Content="Audio file" Margin="3,0"/>
+                  <RadioButton x:Name="ModeSystem" Style="{StaticResource Seg}" GroupName="mode" Content="System audio"/>
+                </StackPanel>
+              </Border>
+            </DockPanel>
+            <DockPanel x:Name="FileRow" Margin="116,5,0,5">
+              <Button x:Name="PickBtn" Style="{StaticResource Secondary}" Content="Choose file…"/>
+              <TextBlock x:Name="FileName" Text="No file chosen" FontSize="13" Foreground="{DynamicResource Faint}" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
+            <DockPanel x:Name="StartRow" Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Start at"/>
+              <TextBox x:Name="StartAt" Style="{StaticResource Field}" Width="72" TextAlignment="Center" Text="0:00"/>
+              <TextBlock Style="{StaticResource Hint}" Text="skip an intro or practise one section" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </DockPanel>
+            <DockPanel x:Name="VolRow" Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Backing volume"/>
+              <TextBlock x:Name="BackVolVal" DockPanel.Dock="Right" Style="{StaticResource Mono}" FontSize="11.5" Width="54" TextAlignment="Right" VerticalAlignment="Center"/>
+              <local:HSlider x:Name="BackVolSl" Min="0" Max="150" Step="5" Default="100"/>
+            </DockPanel>
+            <DockPanel x:Name="CalRow" Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Sync"/>
+              <Button x:Name="CalBtn" Style="{StaticResource Secondary}" Content="Calibrate latency…"/>
+              <TextBlock x:Name="CalTxt" FontSize="12" Foreground="{DynamicResource Faint}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
+            </DockPanel>
+            <Border Background="{DynamicResource Muted}" CornerRadius="10" Padding="14,10" Margin="0,8,0,0">
+              <TextBlock x:Name="ModeHint" FontSize="12" Foreground="{DynamicResource Sub}" TextWrapping="Wrap" LineHeight="18"/>
+            </Border>
+          </StackPanel>
+          <TextBlock x:Name="LockedNote" Visibility="Collapsed" Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource Err}"
+                     Text="Recording in progress: the setup is locked until you stop."/>
+        </StackPanel>
+
+        <!-- Keyboard shortcut -->
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderB}" Padding="0,18,0,20">
+          <StackPanel>
+            <TextBlock Text="KEYBOARD SHORTCUT" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Sub}" Margin="0,0,0,10"/>
+            <DockPanel Margin="0,5">
+              <TextBlock Style="{StaticResource Label}" Text="Record / Stop"/>
+              <Button x:Name="KeyBtn" Style="{StaticResource Secondary}" MinWidth="130" FontFamily="{StaticResource MonoFont}"
+                      ToolTip="Click, then press the key (or key combo) you want"/>
+              <TextBlock x:Name="KeyHint" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
+            </DockPanel>
+            <CheckBox x:Name="KeyGlobal" Margin="116,8,0,0" Content="Also works while another app is in front"/>
+            <TextBlock x:Name="KeyWarn" Margin="116,8,0,0" FontSize="12" TextWrapping="Wrap" Visibility="Collapsed"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Pitch detection -->
+        <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderB}" Padding="0,18,0,22">
+          <StackPanel>
+            <TextBlock Text="PITCH DETECTION" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Sub}" Margin="0,0,0,14"/>
+            <UniformGrid x:Name="Faders" Rows="1"/>
+            <TextBlock Style="{StaticResource Hint}" TextAlignment="Center" Margin="0,14,0,0"
+                       Text="Sensitivity: how quiet you can sing · Noise filter: rejects unclear pitch · Smoothing: steadies the pitch line · Min bar: hides short blips. Double-click a fader to reset it."/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>
