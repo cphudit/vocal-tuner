@@ -68,10 +68,26 @@ VocalTuner.exe --outtest <dir> [output name]      sine through different WASAPI 
 VocalTuner.exe --mictest <file>                   microphone mute/volume and capture levels
 ```
 
+## How I built this
+
+I built Vocal Tuner because I wanted one tool to check my pitch while singing and record myself over karaoke tracks, without juggling a tuner, a recorder and an audio editor.
+
+**My part:** the idea and the requirements, every product decision, and testing on my own setup: a USB mic, USB headphones running at 384 kHz, and a USB speaker. I used the app the way a singer would and reported what felt wrong.
+
+**AI's part:** most of the code was written by an AI coding assistant (Claude by Anthropic), working from my requirements and feedback. It also wrote the diagnostic tools we used to find bugs.
+
+How it got where it is:
+
+1. **Prototype to desktop app.** It started as a browser-based pitch tuner. The first desktop version wrapped that page in WebView2 and took about 3 seconds to open, so I decided to rewrite the UI natively in WPF. It now opens in about 0.6 seconds.
+2. **Shaped by actual use.** After using it I asked for these changes: record controls on the tuner screen, listening that starts on its own, dark mode by default, settings in their own pop-up, the take review in a separate window you can close, no "discard take?" prompt, a configurable record/stop hotkey that works from other apps, and a sound output picker.
+3. **Bugs found on real hardware.**
+   - The live tuner showed nothing on my 384 kHz headphones: the analysis window didn't fit the sample buffer. Audio is now decimated to ≤ 48 kHz first.
+   - A recording that came out silent turned out to be a system-wide mic mute, not the app. Separating those two cases needed a dedicated mic test mode.
+   - The piano crackled like a shorted mic. The first fix (a cheaper synth and a limiter) wasn't enough, so I asked for the live output itself to be measured. The cause: NAudio passes a `byte[]` disguised as a `float[]`, and `Array.Clear` cleared only a quarter of each buffer, so old audio got mixed back in every 10 ms.
+
 ## Credits
 
 - Audio I/O: [NAudio](https://github.com/naudio/NAudio) (MIT).
-- Built with AI pair-programming assistance (Claude by Anthropic).
 
 ## License
 
@@ -84,3 +100,5 @@ VocalTuner.exe --mictest <file>                   microphone mute/volume and cap
 **Vocal Tuner** แอปสำหรับคนร้องเพลงบน Windows ดูได้ว่าร้องตรงคีย์ไหมแบบเรียลไทม์ อัดเสียงร้องพร้อมเพลงคาราโอเกะ (จากไฟล์เพลงหรือเสียงในเครื่อง) แล้ว export เป็นไฟล์ WAV/MP3 คุณภาพสูง มีเปียโนไว้หาโน้ตเริ่มต้น และตั้งปุ่มลัดอัด/หยุดได้
 
 ดาวน์โหลดไฟล์ `VocalTuner-win-x64.zip` ได้จากหน้า [Releases](../../releases/latest) แตกไฟล์แล้วเปิด `VocalTuner.exe` ได้เลย ไม่ต้องติดตั้งอะไรเพิ่ม ถ้า Windows ขึ้นหน้า "Windows protected your PC" ให้กด More info แล้วกด Run anyway
+
+โปรเจกต์นี้ผมเป็นคนคิดไอเดีย กำหนดฟีเจอร์ ทดสอบกับอุปกรณ์จริง และตัดสินใจทุกอย่าง ส่วนโค้ดส่วนใหญ่เขียนโดย AI (Claude) ตามที่ผมกำหนด รายละเอียดอยู่ในหัวข้อ "How I built this"
