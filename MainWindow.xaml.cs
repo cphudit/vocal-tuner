@@ -84,6 +84,8 @@ public partial class MainWindow : Window
         OctDown.Click += (_, _) => ShiftOct(-1);
         OctUp.Click += (_, _) => ShiftOct(1);
         ShiftOct(0);
+        ApplyPianoKeys();
+        PianoKeysLink.Click += (_, _) => OpenSettings(pianoKeys: true);
 
         // live input
         live.RmsThreshold = (float)S.RmsThreshold; live.Clarity = (float)S.Clarity;
@@ -345,13 +347,17 @@ public partial class MainWindow : Window
         t.Add(new Underline(new Run("change")));
     }
 
-    public void OpenSettings()
+    public void OpenSettings(bool pianoKeys = false)
     {
-        if (settingsWin != null) { settingsWin.Activate(); return; }
-        RefreshDevices();
-        settingsWin = new SettingsWindow(this) { Owner = this };
-        settingsWin.Closed += (_, _) => { settingsWin = null; SettingsBtn.Tag = null; UpdateSummary(); Activate(); };
-        settingsWin.Show();
+        if (settingsWin == null)
+        {
+            RefreshDevices();
+            settingsWin = new SettingsWindow(this) { Owner = this };
+            settingsWin.Closed += (_, _) => { settingsWin = null; SettingsBtn.Tag = null; UpdateSummary(); Activate(); };
+            settingsWin.Show();
+        }
+        else settingsWin.Activate();
+        if (pianoKeys) settingsWin.ShowPianoKeys();
     }
 
     public void ShowRecErr(string? msg)
@@ -500,7 +506,7 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ piano
 
-    void Strike(int midi)
+    public void Strike(int midi)
     {
         try { synth.Strike(midi, S.PianoVol / 100.0); } catch { }
         Keyboard.Light(midi);
@@ -512,11 +518,34 @@ public partial class MainWindow : Window
         OctLabel.Text = $"C{Keyboard.BaseOct} – C{Keyboard.BaseOct + 2}";
     }
 
-    static readonly Dictionary<Key, int> PianoKeys = new()
+    // computer key -> semitone above the lowest C on screen, plus the octave keys (all from settings)
+    readonly Dictionary<Key, int> pianoMap = new();
+    Key octDownKey, octUpKey;
+
+    /// <summary>Display text for a stored key name ("OemSemicolon" -> ";", "" -> "").</summary>
+    public static string KeyLabel(string? name) => Shortcut.Parse(name).ToString();
+
+    /// <summary>Re-reads the piano key mapping from settings (after it was edited) and updates labels and hint.</summary>
+    public void ApplyPianoKeys()
     {
-        [Key.A] = 0, [Key.W] = 1, [Key.S] = 2, [Key.E] = 3, [Key.D] = 4, [Key.F] = 5, [Key.T] = 6, [Key.G] = 7, [Key.Y] = 8,
-        [Key.H] = 9, [Key.U] = 10, [Key.J] = 11, [Key.K] = 12, [Key.O] = 13, [Key.L] = 14, [Key.P] = 15, [Key.OemSemicolon] = 16,
-    };
+        pianoMap.Clear();
+        foreach (var (off, name) in S.PianoKeys)
+        {
+            var k = Shortcut.Parse(name).Key;
+            if (k != Key.None) pianoMap[k] = off;
+        }
+        octDownKey = Shortcut.Parse(S.OctDownKey).Key;
+        octUpKey = Shortcut.Parse(S.OctUpKey).Key;
+        Keyboard.LabelFor = off => KeyLabel(S.PianoKeys.GetValueOrDefault(off));
+        Keyboard.InvalidateVisual();
+
+        var h = PianoHint.Inlines;
+        h.Clear();
+        string down = KeyLabel(S.OctDownKey), up = KeyLabel(S.OctUpKey);
+        h.Add(new Run("play the keys shown on the piano · "));
+        if (down != "" || up != "") h.Add(new Run($"{(down == "" ? "—" : down)} / {(up == "" ? "—" : up)} shift octave · "));
+        h.Add(new Underline(new Run("customize keys")));
+    }
 
     void OnKey(object sender, KeyEventArgs e)
     {
@@ -524,9 +553,13 @@ public partial class MainWindow : Window
         if (S.Page == "piano")
         {
             if (e.IsRepeat) return;
-            if (e.Key == Key.Z) { ShiftOct(-1); e.Handled = true; }
-            else if (e.Key == Key.X) { ShiftOct(1); e.Handled = true; }
-            else if (PianoKeys.TryGetValue(e.Key, out int off)) { Strike(12 * (Keyboard.BaseOct + 1) + off); e.Handled = true; }
+            // Ctrl/Alt/Win combos are left alone so they keep working as shortcuts
+            if ((System.Windows.Input.Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Windows)) != 0) return;
+            var key = Shortcut.KeyOf(e);
+            if (key == Key.None) return;
+            if (key == octDownKey) { ShiftOct(-1); e.Handled = true; }
+            else if (key == octUpKey) { ShiftOct(1); e.Handled = true; }
+            else if (pianoMap.TryGetValue(key, out int off)) { Strike(12 * (Keyboard.BaseOct + 1) + off); e.Handled = true; }
         }
     }
 

@@ -17,7 +17,7 @@ A fast, native Windows app for singers: see your pitch live, record yourself ove
 - **Latency calibration**: measures your mic/headphone round-trip once, then lines your voice up with the music automatically. Fine-tune it by ear in the review window.
 - **Review window** after each take: waveform, pitch graph, playback, voice and backing levels, and sync nudge.
 - **Export**: WAV 24-bit, WAV 32-bit float or MP3 320 kbps, with optional normalisation to −1 dB and an optional voice-only file.
-- **Piano** to find your starting note, playable with the mouse or the computer keyboard.
+- **Piano** to find your starting note, playable with the mouse or the computer keyboard. Every note key and the octave-shift keys can be remapped in Settings.
 - **Record/stop shortcut**: one key (F9 by default, configurable) that can work even while another app is in front.
 - **Sound output picker**: follow the Windows default or pin a specific device.
 - Dark mode by default, with a light theme too.

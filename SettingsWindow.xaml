@@ -76,6 +76,26 @@
           </StackPanel>
         </Border>
 
+        <!-- Piano keys -->
+        <Border x:Name="PianoSec" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderB}" Padding="0,18,0,20">
+          <StackPanel>
+            <DockPanel Margin="0,0,0,12">
+              <Button x:Name="PianoReset" DockPanel.Dock="Right" Style="{StaticResource Link}" ToolTip="Back to A W S E D F … and Z / X">
+                <TextBlock Text="Reset to defaults" FontSize="12" Foreground="{DynamicResource Sub}" TextDecorations="Underline"/>
+              </Button>
+              <TextBlock Text="PIANO KEYS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
+            </DockPanel>
+            <local:PianoKeyboard x:Name="PianoEdit" Height="150" Margin="6,6,6,0"/>
+            <TextBlock x:Name="PianoEditHint" Style="{StaticResource Hint}" Margin="0,14,0,0" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+              <TextBlock Style="{StaticResource Label}" Text="Octave down"/>
+              <Button x:Name="OctDownBtn" Style="{StaticResource Secondary}" MinWidth="86" FontFamily="{StaticResource MonoFont}" ToolTip="Click, then press a key"/>
+              <TextBlock Text="Octave up" FontSize="13" VerticalAlignment="Center" Margin="28,0,14,0"/>
+              <Button x:Name="OctUpBtn" Style="{StaticResource Secondary}" MinWidth="86" FontFamily="{StaticResource MonoFont}" ToolTip="Click, then press a key"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
         <!-- Pitch detection -->
         <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderB}" Padding="0,18,0,22">
           <StackPanel>

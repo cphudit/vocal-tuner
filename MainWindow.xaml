@@ -136,8 +136,9 @@
         <Button x:Name="PianoOut" Style="{StaticResource Link}" HorizontalAlignment="Center" Margin="0,16,0,0" ToolTip="Choose where the sound plays">
           <TextBlock x:Name="PianoOutText" FontSize="12" Foreground="{DynamicResource Sub}" TextTrimming="CharacterEllipsis"/>
         </Button>
-        <TextBlock Style="{StaticResource Mono}" FontSize="11" Foreground="{DynamicResource Faint}" HorizontalAlignment="Center" Margin="0,22,0,0"
-                   Text="A S D F G H J K … play notes · W E T Y U for sharps · Z / X shift octave"/>
+        <Button x:Name="PianoKeysLink" Style="{StaticResource Link}" HorizontalAlignment="Center" Margin="0,22,0,0" ToolTip="Choose which computer keys play each note and shift the octave">
+          <TextBlock x:Name="PianoHint" Style="{StaticResource Mono}" FontSize="11" Foreground="{DynamicResource Faint}"/>
+        </Button>
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

@@ -350,9 +350,15 @@ public sealed class WaveView : Painted
 /// <summary>Two-octave (+1 key) piano with computer-keyboard hints. Raises <see cref="Struck"/> on click.</summary>
 public sealed class PianoKeyboard : Painted
 {
-    public static readonly string[] Kb = ["a", "w", "s", "e", "d", "f", "t", "g", "y", "h", "u", "j", "k", "o", "l", "p", ";"];
     int baseOct = 3;
     public int BaseOct { get => baseOct; set { baseOct = value; InvalidateVisual(); } }
+
+    /// <summary>Computer-key label for a key, by semitone above the lowest C shown (0..24).</summary>
+    public Func<int, string>? LabelFor;
+
+    int? selected;
+    /// <summary>Key (semitone above the lowest C) drawn with a highlight ring, e.g. while assigning it a computer key.</summary>
+    public int? SelectedOffset { get => selected; set { selected = value; InvalidateVisual(); } }
     public event Action<int>? Struck;
     readonly Dictionary<int, DateTime> lit = new();
     readonly System.Windows.Threading.DispatcherTimer fade = new() { Interval = TimeSpan.FromMilliseconds(60) };
@@ -388,7 +394,15 @@ public sealed class PianoKeyboard : Painted
             }
     }
 
-    string KbFor(int midi) { int off = midi - 12 * (baseOct + 1); return off >= 0 && off < Kb.Length ? Kb[off] : ""; }
+    string KbFor(int midi) { int off = midi - 12 * (baseOct + 1); return LabelFor?.Invoke(off) ?? ""; }
+
+    // label shrunk to fit narrow keys ("Num 1", "F10"…)
+    FormattedText KbText(string s, double size, Brush b, double maxW)
+    {
+        var t = Draw.Text(s, size, b, this);
+        while (t.Width > maxW && size > 7) { size -= 1; t = Draw.Text(s, size, b, this); }
+        return t;
+    }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
@@ -417,7 +431,7 @@ public sealed class PianoKeyboard : Painted
                 dc.DrawGeometry(lit.ContainsKey(midi) ? whiteOn : white, edge, Draw.Rounded(r, 5));
                 var nm = Draw.Text(Draw.NoteName(midi) + Draw.Octave(midi), 11, nmW, this, false);
                 dc.DrawText(nm, new Point(r.X + (r.Width - nm.Width) / 2, r.Bottom - 12 - nm.Height));
-                var kb = Draw.Text(KbFor(midi), 11, kbW, this);
+                var kb = KbText(KbFor(midi), 11, kbW, r.Width - 4);
                 dc.DrawText(kb, new Point(r.X + (r.Width - kb.Width) / 2, r.Bottom - 16 - nm.Height - kb.Height));
             }
         }
@@ -425,9 +439,13 @@ public sealed class PianoKeyboard : Painted
         {
             if (!isBlack) continue;
             dc.DrawRoundedRectangle(lit.ContainsKey(midi) ? P.B(P.Green) : black, null, r, 4, 4);
-            var kb = Draw.Text(KbFor(midi), 10, kbB, this);
+            var kb = KbText(KbFor(midi), 10, kbB, r.Width - 2);
             dc.DrawText(kb, new Point(r.X + (r.Width - kb.Width) / 2, r.Bottom - 8 - kb.Height));
         }
+        if (selected is int sel)
+            foreach (var (midi, r, _) in Keys())
+                if (midi - 12 * (baseOct + 1) == sel)
+                    dc.DrawRoundedRectangle(P.B(P.Green, 40), new Pen(P.B(P.Green), 2.5), new Rect(r.X + 1.5, r.Y + 1.5, Math.Max(0, r.Width - 3), Math.Max(0, r.Height - 3)), 5, 5);
     }
 }
 

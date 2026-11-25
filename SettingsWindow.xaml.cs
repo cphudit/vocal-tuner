@@ -52,14 +52,34 @@ public partial class SettingsWindow : Window
         PreviewKeyDown += (_, e) =>
         {
             if (Capturing) { CaptureKey(e); return; }
+            if (pianoCap != null) { CapturePianoKey(e); return; }
             if (e.Key == Key.Escape) { Close(); e.Handled = true; }
         };
 
         // keyboard shortcut
         KeyBtn.Click += (_, _) => { if (Capturing) EndCapture(); else BeginCapture(); };
         KeyBtn.LostKeyboardFocus += (_, _) => { if (Capturing) EndCapture(); };
-        Deactivated += (_, _) => { if (Capturing) EndCapture(); };
-        Closed += (_, _) => { if (Capturing) EndCapture(); };
+        Deactivated += (_, _) => { if (Capturing) EndCapture(); if (pianoCap != null) EndPianoCapture(null); };
+        Closed += (_, _) => { if (Capturing) EndCapture(); if (pianoCap != null) EndPianoCapture(null); };
+
+        // piano keys
+        PianoEdit.BaseOct = 3;                 // C3 … C5; the mapping is relative to the lowest C, so it follows the octave
+        PianoEdit.LabelFor = off => MainWindow.KeyLabel(S.PianoKeys.GetValueOrDefault(off));
+        PianoEdit.Struck += midi =>
+        {
+            int off = midi - 48;
+            M.Strike(midi);
+            if (pianoCap == off) EndPianoCapture(null); else BeginPianoCapture(off);
+        };
+        OctDownBtn.Click += (_, _) => { if (pianoCap == OctDownSlot) EndPianoCapture(null); else BeginPianoCapture(OctDownSlot); };
+        OctUpBtn.Click += (_, _) => { if (pianoCap == OctUpSlot) EndPianoCapture(null); else BeginPianoCapture(OctUpSlot); };
+        PianoReset.Click += (_, _) =>
+        {
+            S.PianoKeys = AppSettings.DefaultPianoKeys(); S.OctDownKey = "Z"; S.OctUpKey = "X"; S.Save();
+            M.ApplyPianoKeys();
+            EndPianoCapture("Back to the default keys.");
+        };
+        ShowPianoKeysUi(null);
         RoutedEventHandler onGlobal = (_, _) =>
         {
             if (loading || S.RecShortcutGlobal == (KeyGlobal.IsChecked == true)) return;
@@ -91,6 +111,104 @@ public partial class SettingsWindow : Window
         ShowShortcut();
     }
 
+    // ------------------------------------------------------------------ piano keys
+
+    const int OctDownSlot = -1, OctUpSlot = -2;
+    int? pianoCap;                       // slot waiting for a key: 0..24 = note, -1/-2 = octave down/up
+
+    /// <summary>Scrolls to the piano-keys editor (opened from the Piano page).</summary>
+    public void ShowPianoKeys() => Dispatcher.BeginInvoke(() => PianoSec.BringIntoView(), System.Windows.Threading.DispatcherPriority.Loaded);
+
+    static string SlotName(int slot) => slot switch
+    {
+        OctDownSlot => "Octave down",
+        OctUpSlot => "Octave up",
+        _ => Draw.NoteName(48 + slot) + Draw.Octave(48 + slot),
+    };
+
+    string GetSlot(int slot) => slot switch
+    {
+        OctDownSlot => S.OctDownKey,
+        OctUpSlot => S.OctUpKey,
+        _ => S.PianoKeys.GetValueOrDefault(slot, ""),
+    };
+
+    void SetSlot(int slot, string name)
+    {
+        if (slot == OctDownSlot) S.OctDownKey = name;
+        else if (slot == OctUpSlot) S.OctUpKey = name;
+        else if (name == "") S.PianoKeys.Remove(slot);
+        else S.PianoKeys[slot] = name;
+    }
+
+    void BeginPianoCapture(int slot)
+    {
+        if (Capturing) EndCapture();
+        pianoCap = slot;
+        M.ShortcutSuspended = true;      // so the Record key can't start a take while you're choosing keys
+        ShowPianoKeysUi($"Press the key for {SlotName(slot)}…  (Esc cancels · Backspace removes it)");
+    }
+
+    void EndPianoCapture(string? message)
+    {
+        bool was = pianoCap != null;
+        pianoCap = null;
+        if (was) M.ShortcutSuspended = false;
+        ShowPianoKeysUi(message);
+    }
+
+    void CapturePianoKey(KeyEventArgs e)
+    {
+        e.Handled = true;
+        int slot = pianoCap!.Value;
+        var key = Shortcut.KeyOf(e);
+        if (Shortcut.IsModifier(key) || e.IsRepeat) return;
+        if (key == Key.Escape) { EndPianoCapture(null); return; }
+        if (key is Key.Back or Key.Delete)
+        {
+            SetSlot(slot, ""); S.Save(); M.ApplyPianoKeys();
+            EndPianoCapture($"{SlotName(slot)} has no key now.");
+            return;
+        }
+        if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Windows)) != 0 || key is Key.Tab or Key.Return)
+        {
+            PianoEditHint.Text = $"Use a single key without Ctrl / Alt / Win for {SlotName(slot)}.  (Esc cancels)";
+            return;
+        }
+        var rec = Shortcut.Parse(S.RecShortcut);
+        if (!rec.IsEmpty && rec.Mods == ModifierKeys.None && rec.Key == key)
+        {
+            PianoEditHint.Text = $"\"{rec}\" is the Record / Stop shortcut. Pick another key for {SlotName(slot)}, or change that shortcut above.";
+            return;
+        }
+
+        string name = key.ToString();
+        // a computer key plays only one thing: take it away from wherever it was before
+        string? movedFrom = null;
+        foreach (int other in S.PianoKeys.Keys.Append(OctDownSlot).Append(OctUpSlot).ToList())
+            if (other != slot && GetSlot(other) == name) { SetSlot(other, ""); movedFrom = SlotName(other); }
+        SetSlot(slot, name);
+        S.Save();
+        M.ApplyPianoKeys();
+        string label = MainWindow.KeyLabel(name);
+        EndPianoCapture(movedFrom != null
+            ? $"\"{label}\" now plays {SlotName(slot)} (taken from {movedFrom}, which has no key now)."
+            : $"\"{label}\" now plays {SlotName(slot)}.");
+    }
+
+    void ShowPianoKeysUi(string? message)
+    {
+        PianoEdit.SelectedOffset = pianoCap is int s && s >= 0 ? s : null;
+        PianoEdit.InvalidateVisual();
+        string Cap(int slot) => pianoCap == slot ? "Press a key…" : (MainWindow.KeyLabel(GetSlot(slot)) is { Length: > 0 } t ? t : "Not set");
+        OctDownBtn.Content = Cap(OctDownSlot);
+        OctUpBtn.Content = Cap(OctUpSlot);
+        if (pianoCap == OctDownSlot) OctDownBtn.SetResourceReference(BorderBrushProperty, "Text"); else OctDownBtn.ClearValue(BorderBrushProperty);
+        if (pianoCap == OctUpSlot) OctUpBtn.SetResourceReference(BorderBrushProperty, "Text"); else OctUpBtn.ClearValue(BorderBrushProperty);
+        PianoEditHint.Text = message ??
+            "Click a key on the piano, then press the computer key you want for it. Keys follow the octave buttons: they play relative to the lowest note on screen.";
+    }
+
     // ------------------------------------------------------------------ keyboard shortcut
 
     /// <summary>True while the shortcut box is waiting for a key press.</summary>
@@ -98,6 +216,7 @@ public partial class SettingsWindow : Window
 
     void BeginCapture()
     {
+        if (pianoCap != null) EndPianoCapture(null);
         Capturing = true;
         M.ShortcutSuspended = true;        // let the current shortcut reach this box instead of toggling recording
         KeyBtn.Content = "Press a key…";

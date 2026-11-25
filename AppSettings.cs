@@ -17,6 +17,17 @@ public sealed class AppSettings
 
     public int PianoVol { get; set; } = 70;
 
+    // piano keyboard mapping: semitone above the lowest C on screen (0..24) -> WPF key name ("A", "OemSemicolon", "NumPad1"…)
+    public Dictionary<int, string> PianoKeys { get; set; } = DefaultPianoKeys();
+    public string OctDownKey { get; set; } = "Z";
+    public string OctUpKey { get; set; } = "X";
+
+    public static Dictionary<int, string> DefaultPianoKeys() => new()
+    {
+        [0] = "A", [1] = "W", [2] = "S", [3] = "E", [4] = "D", [5] = "F", [6] = "T", [7] = "G", [8] = "Y",
+        [9] = "H", [10] = "U", [11] = "J", [12] = "K", [13] = "O", [14] = "L", [15] = "P", [16] = "OemSemicolon",
+    };
+
     // recording setup
     public string RecMode { get; set; } = "file";          // none | file | system
     public string MicId { get; set; } = "";
