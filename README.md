@@ -1,5 +1,7 @@
 # Vocal Tuner
 
+[![Build](https://github.com/cphudit/vocal-tuner/actions/workflows/build.yml/badge.svg)](https://github.com/cphudit/vocal-tuner/actions/workflows/build.yml)
+
 A fast, native Windows app for singers: see your pitch live, record yourself over a karaoke or backing track, and export a clean, high-quality audio file.
 
 <p align="center">
@@ -45,6 +47,19 @@ Get the latest **`VocalTuner-win-x64.zip`** from the [Releases page](../../relea
 - Windows 10 or 11, 64-bit.
 - The app isn't code-signed, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
 - Settings are stored in `%LOCALAPPDATA%\VocalTuner\`.
+
+### Privacy
+
+Vocal Tuner never connects to the internet. It uses your microphone and sound output, and everything it keeps (settings, the last take, past analyses) stays in `%LOCALAPPDATA%\VocalTuner\` on your PC. Recordings and reports are saved only where you choose.
+
+### Verify the download
+
+Releases are built by [GitHub Actions](.github/workflows/release.yml) from the source at the release tag, not on someone's PC. Each release page lists the zip's SHA-256 checksum and a link to the build log.
+
+```powershell
+Get-FileHash VocalTuner-win-x64.zip                                       # compare with the SHA-256 on the release page
+gh attestation verify VocalTuner-win-x64.zip --repo cphudit/vocal-tuner  # proves GitHub built it from this repository
+```
 
 ## Build from source
 
@@ -119,5 +134,7 @@ How it got where it is:
 **Vocal Tuner** แอปสำหรับคนร้องเพลงบน Windows ดูได้ว่าร้องตรงคีย์ไหมแบบเรียลไทม์ อัดเสียงร้องพร้อมเพลงคาราโอเกะ (จากไฟล์เพลงหรือเสียงในเครื่อง) แล้ว export เป็นไฟล์ WAV/MP3 คุณภาพสูง มีเปียโนไว้หาโน้ตเริ่มต้น โหมดวอร์มอัพ และหน้า Coach ที่วิเคราะห์การร้อง (ความตรงของโน้ต การช้อนเสียง ท้ายประโยค vibrato คุณภาพเสียง) แล้วบอกจุดแข็ง จุดที่ควรแก้พร้อมเวลาในเพลง และแบบฝึก โดยไม่ต้องรู้ว่าเป็นเพลงอะไร
 
 ดาวน์โหลดไฟล์ `VocalTuner-win-x64.zip` ได้จากหน้า [Releases](../../releases/latest) แตกไฟล์แล้วเปิด `VocalTuner.exe` ได้เลย ไม่ต้องติดตั้งอะไรเพิ่ม ถ้า Windows ขึ้นหน้า "Windows protected your PC" ให้กด More info แล้วกด Run anyway
+
+แอปไม่เชื่อมต่ออินเทอร์เน็ตเลย ข้อมูลทั้งหมดเก็บอยู่ในเครื่องของคุณ และไฟล์ใน Releases ถูก build โดย GitHub Actions จากโค้ดในหน้านี้ ตรวจสอบได้ด้วยค่า SHA-256 ที่อยู่ในหน้า Release
 
 โปรเจกต์นี้ผมเป็นคนคิดไอเดีย กำหนดฟีเจอร์ ทดสอบกับอุปกรณ์จริง และตัดสินใจทุกอย่าง ส่วนโค้ดส่วนใหญ่เขียนโดย AI (Claude) ตามที่ผมกำหนด รายละเอียดอยู่ในหัวข้อ "How I built this"

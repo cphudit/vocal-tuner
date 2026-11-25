@@ -9,7 +9,7 @@
     <AssemblyName>VocalTuner</AssemblyName>
     <RootNamespace>VocalTuner</RootNamespace>
     <Product>Vocal Tuner</Product>
-    <Version>1.0.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <StartupObject>VocalTuner.Program</StartupObject>
