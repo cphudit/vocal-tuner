@@ -22,7 +22,31 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
         public long Left;                  // samples left before the release fade starts
         public double Release = 1;         // 1 = no fade yet; falls to 0 during the release fade
         public double ReleaseStep;
+        public long Delay;                 // samples to wait before the note starts (scheduled notes)
+        public int Gen;                    // schedule generation (scheduled notes), so a cancel can fade them
     }
+
+    // ---- scheduled notes (warm-up exercises): sample-accurate, on the stream's own clock
+    readonly ConcurrentQueue<(double at, int midi, double level, double dur, int gen)> schedIn = new();
+    readonly List<(long start, int midi, double level, double dur, int gen)> sched = new();
+    volatile int schedGen = 1;
+    int seenGen = 1;
+    long framesDone;                       // frames rendered since the stream first opened
+
+    /// <summary>Stream clock in seconds (how far rendering has got; playback is ~50 ms behind).</summary>
+    public double Now => Interlocked.Read(ref framesDone) / (double)WaveFormat.SampleRate;
+
+    /// <summary>Bumped whenever the output stream is (re)opened; scheduled times are void after that.</summary>
+    public int StreamGen { get; private set; }
+
+    /// <summary>Opens the output now (so <see cref="Now"/> runs) without playing anything.</summary>
+    public void Open() => EnsureOutput();
+
+    /// <summary>Plays <paramref name="midi"/> at stream time <paramref name="at"/> for <paramref name="dur"/> seconds.</summary>
+    public void Schedule(double at, int midi, double volume, double dur) => schedIn.Enqueue((at, midi, Level(volume), dur, schedGen));
+
+    /// <summary>Drops every scheduled note and fades out the ones already sounding.</summary>
+    public void CancelScheduled() => schedGen++;
 
     // timbre: harmonic number and amplitude
     static readonly (int h, double amp)[] Partials = [(1, 1), (2, 0.4), (3, 0.18), (4, 0.09), (5, 0.05)];
@@ -110,10 +134,11 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
             o.Play();
             output = o;
             OpenDeviceId = dev.ID;
+            StreamGen++;
         }
     }
 
-    void StartVoice(int midi, double vol, int rate)
+    void StartVoice(int midi, double vol, int rate, long delay = 0, double? length = null, int gen = 0)
     {
         // the same key again, or too many notes: fade the old one out quickly instead of cutting it (no click)
         foreach (var v in voices)
@@ -133,7 +158,9 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
             Peak = vol,
             AttackStep = vol / Math.Max(1, Attack * rate),
             Decay = Math.Pow(end / vol, 1.0 / decaySamples),
-            Left = (long)(Dur * rate),
+            Left = (long)(Math.Min(Dur, length ?? Dur) * rate),
+            Delay = delay,
+            Gen = gen,
         });
     }
 
@@ -173,8 +200,27 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
         // previous block then gets mixed in again, which sounded like a crackling, shorted mic.
         for (int i = offset, e = offset + count; i < e; i++) buffer[i] = 0f;
         int rate = WaveFormat.SampleRate, frames = count / 2;
-        if (resetVoices) { resetVoices = false; voices.Clear(); limiterEnv = 0; }
+        if (resetVoices) { resetVoices = false; voices.Clear(); sched.Clear(); limiterEnv = 0; }
         while (pending.TryDequeue(out var p)) StartVoice(p.midi, p.vol, rate);
+
+        // scheduled notes: a cancel bumps the generation, which drops queued notes and fades the sounding ones
+        int gen = schedGen;
+        if (gen != seenGen)
+        {
+            seenGen = gen;
+            sched.RemoveAll(s => s.gen != gen);
+            foreach (var v in voices) if (v.Gen != 0 && v.Gen != gen) { if (v.Delay > 0) { v.Delay = 0; v.Release = 0; v.ReleaseStep = 1; } else Fade(v, 0.06, rate); }
+        }
+        while (schedIn.TryDequeue(out var q))
+            if (q.gen == gen) sched.Add(((long)Math.Round(q.at * rate), q.midi, q.level, q.dur, q.gen));
+        long blockStart = framesDone, blockEnd = blockStart + frames;
+        for (int si = sched.Count - 1; si >= 0; si--)
+        {
+            var s = sched[si];
+            if (s.start >= blockEnd) continue;
+            StartVoice(s.midi, s.level, rate, Math.Max(0, s.start - blockStart), s.dur, s.gen);
+            sched.RemoveAt(si);
+        }
 
         for (int vi = voices.Count - 1; vi >= 0; vi--)
         {
@@ -183,6 +229,8 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
             bool done = false;
             for (int i = 0; i < frames; i++)
             {
+                if (v.Delay > 0) { v.Delay--; continue; }
+                if (rel <= 0) { done = true; break; }   // cancelled before it started
                 if (v.Attacking)
                 {
                     gain += v.AttackStep;
@@ -230,6 +278,7 @@ public sealed class PianoSynth : ISampleProvider, IDisposable
             }
         }
         limiterEnv = env < 1e-9 ? 0 : env;
+        Interlocked.Add(ref framesDone, frames);
         if (DiagLog != null)
         {
             // look for jumps inside this block and across the boundary with the previous block

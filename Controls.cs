@@ -40,6 +40,11 @@ public abstract class Painted : FrameworkElement
     }
 }
 
+public enum TargetGrade { Pending, Good, Close, Off, Missed }
+
+/// <summary>A note to sing on the pitch roll: times in ms (same clock as the trace), MIDI note, result.</summary>
+public readonly record struct RollTarget(double T0, double T1, int Midi, TargetGrade Grade, bool Active);
+
 /// <summary>Scrolling piano roll: note lanes, held-note blocks coloured by accuracy, and the pitch line.</summary>
 public sealed class PitchRoll : Painted
 {
@@ -47,6 +52,12 @@ public sealed class PitchRoll : Painted
     public double TRight, FocusT, MinBar = 100;
     public double WindowMs { get; set; } = 8000;
     public double? PlayT;
+    /// <summary>Notes to sing (warm-up): drawn as boxes behind the pitch line.</summary>
+    public IReadOnlyList<RollTarget>? Targets;
+    /// <summary>When set, the view centres on this note instead of following the pitch line.</summary>
+    public double? FocusMidi;
+    /// <summary>Draw the held-note blocks coloured by accuracy (off when targets do the grading).</summary>
+    public bool ShowNoteBlocks { get; set; } = true;
     double? viewMid;
     public void ResetView() => viewMid = null;
 
@@ -69,6 +80,7 @@ public sealed class PitchRoll : Painted
         }
         if (focus == null && PlayT != null)
             foreach (var p in pts) if (!p.IsGap && p.T >= FocusT) { focus = p.Midi; break; }
+        if (FocusMidi is double fx) focus = fx;
         viewMid ??= focus ?? 57;
         double mid = viewMid.Value;
         if (focus is double fm)
@@ -91,6 +103,24 @@ public sealed class PitchRoll : Painted
             dc.DrawRectangle(P.B(sharp ? P.RollSharp : P.RollNatural), null, new Rect(0, Y(n + 0.5), W, laneH + 0.5));
         }
 
+        // target boxes (warm-up): outline while coming up / being sung, then filled by how close you were
+        if (Targets != null)
+            foreach (var tg in Targets)
+            {
+                double x0 = X(tg.T0), x1 = X(tg.T1);
+                if (x1 < 0 || x0 > W) continue;
+                var r = new Rect(x0 + 1, Y(tg.Midi + 0.5) + 1, Math.Max(2, x1 - x0 - 2), Math.Max(2, laneH - 2));
+                var (fill, edge) = tg.Grade switch
+                {
+                    TargetGrade.Good => (P.B(P.Green, 70), P.B(P.Green)),
+                    TargetGrade.Close => (P.B(P.Amber, 70), P.B(P.Amber)),
+                    TargetGrade.Off => (P.B(P.Red, 60), P.B(P.Red)),
+                    TargetGrade.Missed => (P.B(P.Faint, 30), P.B(P.Faint)),
+                    _ => (P.B(P.Text, tg.Active ? (byte)40 : (byte)16), P.B(P.Sub)),
+                };
+                dc.DrawRoundedRectangle(fill, new Pen(edge, tg.Active ? 2 : 1), r, 4, 4);
+            }
+
         // note blocks: consecutive points on the same held note, coloured by average deviation
         double segStart = 0, segEnd = 0, sum = 0; int segNote = int.MinValue, cnt = 0;
         void Flush()
@@ -104,13 +134,16 @@ public sealed class PitchRoll : Painted
             }
             segNote = int.MinValue; sum = 0; cnt = 0;
         }
-        foreach (var p in pts)
+        if (ShowNoteBlocks)
         {
-            if (p.IsGap) { Flush(); continue; }
-            if (p.Note != segNote) { Flush(); segStart = p.T; segNote = p.Note; }
-            segEnd = p.T; sum += Math.Abs(p.Cents); cnt++;
+            foreach (var p in pts)
+            {
+                if (p.IsGap) { Flush(); continue; }
+                if (p.Note != segNote) { Flush(); segStart = p.T; segNote = p.Note; }
+                segEnd = p.T; sum += Math.Abs(p.Cents); cnt++;
+            }
+            Flush();
         }
-        Flush();
 
         // pitch line: break on gaps or jumps instead of drawing vertical drops
         var geo = new StreamGeometry();

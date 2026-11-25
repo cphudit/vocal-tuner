@@ -21,6 +21,7 @@
           <StackPanel Orientation="Horizontal">
             <RadioButton x:Name="TabTuner" Style="{StaticResource Tab}" GroupName="page" Content="Tuner"/>
             <RadioButton x:Name="TabPiano" Style="{StaticResource Tab}" GroupName="page" Content="Piano" Margin="4,0,0,0"/>
+            <RadioButton x:Name="TabWarm" Style="{StaticResource Tab}" GroupName="page" Content="Warm-up" Margin="4,0,0,0"/>
           </StackPanel>
         </Border>
         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -139,6 +140,11 @@
         <Button x:Name="PianoKeysLink" Style="{StaticResource Link}" HorizontalAlignment="Center" Margin="0,22,0,0" ToolTip="Choose which computer keys play each note and shift the octave">
           <TextBlock x:Name="PianoHint" Style="{StaticResource Mono}" FontSize="11" Foreground="{DynamicResource Faint}"/>
         </Button>
+      </StackPanel>
+
+      <!-- ======================= Warm-up page ======================= -->
+      <StackPanel>
+        <local:WarmupView x:Name="PageWarm" Margin="0,30,0,0" Visibility="Collapsed"/>
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

@@ -17,10 +17,15 @@ A fast, native Windows app for singers: see your pitch live, record yourself ove
 - **Latency calibration**: measures your mic/headphone round-trip once, then lines your voice up with the music automatically. Fine-tune it by ear in the review window.
 - **Review window** after each take: waveform, pitch graph, playback, voice and backing levels, and sync nudge.
 - **Export**: WAV 24-bit, WAV 32-bit float or MP3 320 kbps, with optional normalisation to −1 dB and an optional voice-only file.
+- **Warm-up mode**: one button runs a guided 5-note scale (1-2-3-4-5-4-3-2-1) or arpeggio (1-3-5-8-5-3-1). The piano gives the starting chord, plays along, and moves up a semitone each round to the note you pick, then optionally back down, at the BPM you set. Each note you sing is graded green, amber or red on a scrolling target graph.
 - **Piano** to find your starting note, playable with the mouse or the computer keyboard. Every note key and the octave-shift keys can be remapped in Settings.
 - **Record/stop shortcut**: one key (F9 by default, configurable) that can work even while another app is in front.
 - **Sound output picker**: follow the Windows default or pin a specific device.
 - Dark mode by default, with a light theme too.
+
+<p align="center">
+  <img src="docs/warmup.png" width="560" alt="Warm-up mode: arpeggio exercise with target notes and graded results">
+</p>
 
 <p align="center">
   <img src="docs/review.png" width="420" alt="Review window for the last take">

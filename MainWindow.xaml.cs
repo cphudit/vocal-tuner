@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     readonly LiveInput live = new();
     readonly PitchTracker tracker = new();
     readonly PianoSynth synth = new();
+    public PianoSynth Synth => synth;
+    public PitchTracker Tracker => tracker;
     DeviceWatcher? watcher;
     public DeviceList Devices { get; private set; } = new([], []);
     SettingsWindow? settingsWin;
@@ -78,7 +80,7 @@ public partial class MainWindow : Window
 
         // piano
         PianoVol.Value = S.PianoVol; PianoVolVal.Text = S.PianoVol + "%";
-        PianoVol.Changed += v => { S.PianoVol = (int)v; PianoVolVal.Text = (int)v + "%"; };
+        PianoVol.Changed += v => { S.PianoVol = (int)v; PianoVolVal.Text = (int)v + "%"; PageWarm.SyncVolume(); };
         PianoVol.Committed += _ => S.Save();
         Keyboard.Struck += Strike;
         OctDown.Click += (_, _) => ShiftOct(-1);
@@ -110,8 +112,11 @@ public partial class MainWindow : Window
         ApplyShortcut();
         Closing += OnClosing;
         UpdateThemeIcon();
-        (S.Page == "piano" ? TabPiano : TabTuner).IsChecked = true;
-        SetPage(S.Page == "piano" ? "piano" : "tuner");
+        PageWarm.Init(this);
+        TabWarm.Checked += (_, _) => SetPage("warmup");
+        string startPage = S.Page is "piano" or "warmup" ? S.Page : "tuner";
+        (startPage == "piano" ? TabPiano : startPage == "warmup" ? TabWarm : TabTuner).IsChecked = true;
+        SetPage(startPage);
         UpdateRecUi(); UpdateStatus(); UpdateSummary(); ClearNote();
 
         // Show the window first, then open audio devices.
@@ -136,10 +141,20 @@ public partial class MainWindow : Window
     void SetPage(string p)
     {
         S.Page = p; S.Save();
+        if (p != "warmup") PageWarm.Stop();
         PageTuner.Visibility = p == "tuner" ? Visibility.Visible : Visibility.Collapsed;
         PagePiano.Visibility = p == "piano" ? Visibility.Visible : Visibility.Collapsed;
-        Subtitle.Text = p == "piano" ? "Find your starting note" : "Sing, check your pitch, record";
+        PageWarm.Visibility = p == "warmup" ? Visibility.Visible : Visibility.Collapsed;
+        Subtitle.Text = p switch
+        {
+            "piano" => "Find your starting note",
+            "warmup" => "Warm up with the piano",
+            _ => "Sing, check your pitch, record",
+        };
     }
+
+    /// <summary>The piano volume was changed on the Warm-up page: mirror it on the Piano page.</summary>
+    public void PianoVolumeChanged() { PianoVol.Value = S.PianoVol; PianoVolVal.Text = S.PianoVol + "%"; }
 
     void UpdateThemeIcon()
     {
@@ -244,6 +259,7 @@ public partial class MainWindow : Window
         while (live.TryDequeue(out var r))
         {
             tracker.Process(r.TimeMs, r.Freq, S.Alpha);
+            PageWarm.OnPitch(r.TimeMs, r.Freq);
             livePeak = Math.Max(r.Peak, livePeak * 0.9f);
         }
 
@@ -274,6 +290,7 @@ public partial class MainWindow : Window
             Trace.Points = tracker.Trace; Trace.TRight = now; Trace.FocusT = now; Trace.MinBar = S.MinBar;
             Trace.InvalidateVisual();
         }
+        if (S.Page == "warmup" || PageWarm.Running) PageWarm.OnFrame(now);
         UpdateStatus();
     }
 
@@ -550,6 +567,7 @@ public partial class MainWindow : Window
     void OnKey(object sender, KeyEventArgs e)
     {
         if (e.OriginalSource is TextBox) return;
+        if (S.Page == "warmup" && e.Key == Key.Space && !e.IsRepeat) { PageWarm.Toggle(); e.Handled = true; return; }
         if (S.Page == "piano")
         {
             if (e.IsRepeat) return;
@@ -646,6 +664,7 @@ public partial class MainWindow : Window
             return;
         }
         CompositionTarget.Rendering -= OnFrame;
+        PageWarm.Stop();
         if (hotkeyActive) { UnregisterHotKey(hwnd, HotkeyId); hotkeyActive = false; }
         S.Save();
         live.Dispose();

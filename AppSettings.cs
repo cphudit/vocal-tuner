@@ -22,6 +22,14 @@ public sealed class AppSettings
     public string OctDownKey { get; set; } = "Z";
     public string OctUpKey { get; set; } = "X";
 
+    // warm-up exercise
+    public string WarmEx { get; set; } = "five";            // five = 1-2-3-4-5-4-3-2-1 | arp = 1-3-5-8-5-3-1
+    public int WarmStart { get; set; } = 48;                 // lowest starting note (MIDI, C3)
+    public int WarmTop { get; set; } = 57;                   // highest starting note (A3)
+    public int WarmBpm { get; set; } = 100;
+    public bool WarmDown { get; set; } = true;               // come back down after reaching the top
+    public bool WarmMelody { get; set; } = true;             // piano plays the notes too (off = starting chord only)
+
     public static Dictionary<int, string> DefaultPianoKeys() => new()
     {
         [0] = "A", [1] = "W", [2] = "S", [3] = "E", [4] = "D", [5] = "F", [6] = "T", [7] = "G", [8] = "Y",
