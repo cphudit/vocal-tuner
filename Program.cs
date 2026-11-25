@@ -21,6 +21,10 @@ static class Program
             return SelfTest.PianoLive(args[1], args.Length > 2 ? args[2] : null);
         if (args.Length >= 2 && args[0] == "--livetest")
             return SelfTest.LiveTest(args[1]);
+        if (args.Length >= 2 && args[0] == "--coachtest")
+            return Coach.CoachTests.Run(args[1]);
+        if (args.Length >= 2 && args[0] == "--coach")
+            return Coach.CoachTests.Cli(args);
 
         var app = new Application { ShutdownMode = ShutdownMode.OnMainWindowClose };
         // Safety net: log unexpected UI errors and keep running instead of vanishing.

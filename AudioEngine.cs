@@ -365,6 +365,10 @@ public sealed class AudioEngine : IDisposable
         };
     }
 
+    /// <summary>The last take's audio for the singing analysis: mono voice, its rate, and the backing (mono) if any.</summary>
+    public (float[] voice, int rate, float[]? back)? TakeAudio() =>
+        take == null ? null : (take.Voice, take.Rate, take.Back == null ? null : ToMono(take.Back));
+
     // Offset = position in the backing (seconds) that lines up with voice t=0, from clock timestamps.
     // Latency the timestamps can't see (device/USB buffers, headphones) is measured by Calibrate().
     const double InputLatency = 0.010, RenderLatency = 0.015;

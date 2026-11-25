@@ -19,8 +19,13 @@ public static class Mpm
     }
 
     /// <summary>Returns the pitch in Hz (70–1100), or NaN when the frame is too quiet or unclear.</summary>
-    public static double Detect(ReadOnlySpan<float> x, int rate, double rmsThreshold, double clarity, Workspace ws)
+    public static double Detect(ReadOnlySpan<float> x, int rate, double rmsThreshold, double clarity, Workspace ws) =>
+        Detect(x, rate, rmsThreshold, clarity, ws, out _);
+
+    /// <summary>Same, also returning the NSDF peak height at the chosen period (0–1, a periodicity measure).</summary>
+    public static double Detect(ReadOnlySpan<float> x, int rate, double rmsThreshold, double clarity, Workspace ws, out double peak)
     {
+        peak = 0;
         int n = x.Length;
         var P = ws.Prefix; var nsdf = ws.Nsdf;
         P[0] = 0;
@@ -64,6 +69,7 @@ public static class Mpm
         double x1 = nsdf[t0 - 1], x2 = nsdf[t0], x3 = nsdf[t0 + 1];
         double aa = (x1 + x3 - 2 * x2) / 2, bb = (x3 - x1) / 2;
         double T = aa != 0 ? t0 - bb / (2 * aa) : t0;
+        peak = Math.Clamp(aa != 0 ? x2 - bb * bb / (4 * aa) : x2, 0, 1);
         double f = rate / T;
         return f < 70 || f > 1100 ? double.NaN : f;
     }

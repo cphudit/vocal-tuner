@@ -18,6 +18,12 @@ A fast, native Windows app for singers: see your pitch live, record yourself ove
 - **Review window** after each take: waveform, pitch graph, playback, voice and backing levels, and sync nudge.
 - **Export**: WAV 24-bit, WAV 32-bit float or MP3 320 kbps, with optional normalisation to −1 dB and an optional voice-only file.
 - **Warm-up mode**: one button runs a guided 5-note scale (1-2-3-4-5-4-3-2-1) or arpeggio (1-3-5-8-5-3-1). The piano gives the starting chord, plays along, and moves up a semitone each round to the note you pick, then optionally back down, at the BPM you set. Each note you sing is graded green, amber or red on a scrolling target graph.
+- **Coach: feedback on your singing.** Analyse the last take or any recording (WAV, MP3, M4A, FLAC) without knowing the song. You get:
+  - strengths, then the 3–5 most important problems with timestamps, a likely cause and exercises for each
+  - a 5–10 minute daily practice plan
+  - key numbers: notes within ±20/±35 cents, sharp/flat tendency, accuracy per pitch zone, scoops, wandering notes, falling phrase endings, vibrato rate and width, range used, dynamics, and HNR, CPP, jitter and shimmer
+  - the key of your singing, notes that keep falling outside it, and, when there is music, whether the whole vocal is shifted against it
+  - graphs, a report in English (or Thai, if you choose it), HTML export, and a history that compares each take with the previous one
 - **Piano** to find your starting note, playable with the mouse or the computer keyboard. Every note key and the octave-shift keys can be remapped in Settings.
 - **Record/stop shortcut**: one key (F9 by default, configurable) that can work even while another app is in front.
 - **Sound output picker**: follow the Windows default or pin a specific device.
@@ -59,6 +65,7 @@ dotnet publish -c Release -o dist\VocalTuner        # self-contained build in di
 | Live pitch | `LiveInput.cs`, `PitchAnalyzer.cs` | WASAPI capture → downmix to mono, decimate to ≤ 48 kHz → McLeod Pitch Method (NSDF) with SIMD dot products, about 60 analyses per second. |
 | Recording and export | `AudioEngine.cs` | Mic, backing playback and loopback run on separate WASAPI streams. Sync is found by cross-correlation against the system-audio copy or from the calibration, and the export is rendered from the original backing file. MP3 export uses Windows Media Foundation. |
 | Piano | `PianoSynth.cs` | Wavetable additive synth with a voice limit and a soft limiter, cheap even on 384 kHz devices. |
+| Coach | `Coach/*.cs`, `CoachView`, `CoachWindow` | One module per measurement: pitch tracking and note segmentation, intonation, key, note shape (stability, scoops, endings, vibrato), voice quality and registers, dynamics, and music detection. `Feedback.cs` turns the numbers into advice, and all thresholds are in `CoachConfig.cs`. |
 | Shortcut | `Shortcut.cs` | In-app key handling, plus a `RegisterHotKey` global hotkey. |
 
 ### Diagnostics
@@ -71,7 +78,14 @@ VocalTuner.exe --pianotest <dir>                  offline piano stress render: C
 VocalTuner.exe --pianolive <dir> [output name]    plays the piano on a real output and checks it via loopback
 VocalTuner.exe --outtest <dir> [output name]      sine through different WASAPI setups
 VocalTuner.exe --mictest <file>                   microphone mute/volume and capture levels
+VocalTuner.exe --coachtest <dir>                  singing analysis on synthetic audio with known answers
+VocalTuner.exe --coach <audio> [--backing <file>] [--lang en|th] [--voice tenor] [--out <dir>] [--compare <old.json> …]
+                                                  writes "<name> - report.html" and "<name> - analysis.json"
 ```
+
+The Coach thresholds can be tuned without rebuilding: put the fields you want to change from `Coach/CoachConfig.cs` into `%LOCALAPPDATA%\VocalTuner\coach-config.json`. Analyses are kept in `%LOCALAPPDATA%\VocalTuner\coach\`.
+
+**Recording for the Coach:** wear headphones so the mic hears only your voice, record dry (no reverb or effects), use WAV at 44.1 or 48 kHz, and keep the mic about 15–20 cm away. Music in the recording makes the results less accurate (there is no vocal separation).
 
 ## How I built this
 
@@ -102,7 +116,7 @@ How it got where it is:
 
 ### ภาษาไทย
 
-**Vocal Tuner** แอปสำหรับคนร้องเพลงบน Windows ดูได้ว่าร้องตรงคีย์ไหมแบบเรียลไทม์ อัดเสียงร้องพร้อมเพลงคาราโอเกะ (จากไฟล์เพลงหรือเสียงในเครื่อง) แล้ว export เป็นไฟล์ WAV/MP3 คุณภาพสูง มีเปียโนไว้หาโน้ตเริ่มต้น และตั้งปุ่มลัดอัด/หยุดได้
+**Vocal Tuner** แอปสำหรับคนร้องเพลงบน Windows ดูได้ว่าร้องตรงคีย์ไหมแบบเรียลไทม์ อัดเสียงร้องพร้อมเพลงคาราโอเกะ (จากไฟล์เพลงหรือเสียงในเครื่อง) แล้ว export เป็นไฟล์ WAV/MP3 คุณภาพสูง มีเปียโนไว้หาโน้ตเริ่มต้น โหมดวอร์มอัพ และหน้า Coach ที่วิเคราะห์การร้อง (ความตรงของโน้ต การช้อนเสียง ท้ายประโยค vibrato คุณภาพเสียง) แล้วบอกจุดแข็ง จุดที่ควรแก้พร้อมเวลาในเพลง และแบบฝึก โดยไม่ต้องรู้ว่าเป็นเพลงอะไร
 
 ดาวน์โหลดไฟล์ `VocalTuner-win-x64.zip` ได้จากหน้า [Releases](../../releases/latest) แตกไฟล์แล้วเปิด `VocalTuner.exe` ได้เลย ไม่ต้องติดตั้งอะไรเพิ่ม ถ้า Windows ขึ้นหน้า "Windows protected your PC" ให้กด More info แล้วกด Run anyway
 

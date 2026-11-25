@@ -51,6 +51,7 @@ public partial class ReviewWindow : Window
         NormChk.Click += (_, _) => { S.Normalize = NormChk.IsChecked == true; S.Save(); };
         VoiceChk.Click += (_, _) => { S.AlsoVoice = VoiceChk.IsChecked == true; S.Save(); };
         ExportBtn.Click += async (_, _) => await ExportTake();
+        CoachBtn.Click += async (_, _) => { StopPreview(); CoachBtn.IsEnabled = false; await M.PageCoach.AnalyzeTake(); CoachBtn.IsEnabled = true; };
         PreviewKeyDown += OnKey;
         Closing += (_, _) => StopPreview();
 

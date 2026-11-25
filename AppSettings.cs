@@ -53,6 +53,11 @@ public sealed class AppSettings
     public Dictionary<string, CalResult> Cal { get; set; } = new();
     public Dictionary<string, double> Sync { get; set; } = new();
 
+    // singing analysis (Coach page)
+    public string CoachVoice { get; set; } = "tenor";
+    public string CoachLang { get; set; } = "en";             // report + Coach page language: en (default) | th
+    public string CoachBacking { get; set; } = "";          // optional backing track for analysing outside recordings
+
     // export
     public string ExportFormat { get; set; } = "wav24";
     public bool Normalize { get; set; } = true;
@@ -71,11 +76,12 @@ public sealed class AppSettings
                 var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Opts) ?? new AppSettings();
                 // v2: older versions pinned whatever output was the Windows default at first run; follow Windows again
                 if (s.Version < 2) { s.OutId = ""; s.Version = 2; }
+                if (s.Version < 3) { s.CoachLang = "en"; s.Version = 3; }   // English became the default report language
                 return s;
             }
         }
         catch { /* corrupt file: start fresh */ }
-        return new AppSettings { Version = 2 };
+        return new AppSettings { Version = 3 };
     }
 
     public void Save()

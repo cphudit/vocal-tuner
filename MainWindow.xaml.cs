@@ -41,6 +41,9 @@ public partial class MainWindow : Window
 
     // last take (reviewed in its own window; closing the window keeps the take until the next recording)
     TakeSession? session;
+    /// <summary>The last recorded take (null when there is none or it was replaced by a new recording).</summary>
+    public TakeSession? Session => session;
+    public string RecModeName => recMode;
     ReviewWindow? reviewWin;
 
     public MainWindow(AppSettings settings)
@@ -114,8 +117,10 @@ public partial class MainWindow : Window
         UpdateThemeIcon();
         PageWarm.Init(this);
         TabWarm.Checked += (_, _) => SetPage("warmup");
-        string startPage = S.Page is "piano" or "warmup" ? S.Page : "tuner";
-        (startPage == "piano" ? TabPiano : startPage == "warmup" ? TabWarm : TabTuner).IsChecked = true;
+        PageCoach.Init(this);
+        TabCoach.Checked += (_, _) => SetPage("coach");
+        string startPage = S.Page is "piano" or "warmup" or "coach" ? S.Page : "tuner";
+        (startPage == "piano" ? TabPiano : startPage == "warmup" ? TabWarm : startPage == "coach" ? TabCoach : TabTuner).IsChecked = true;
         SetPage(startPage);
         UpdateRecUi(); UpdateStatus(); UpdateSummary(); ClearNote();
 
@@ -142,6 +147,8 @@ public partial class MainWindow : Window
     {
         S.Page = p; S.Save();
         if (p != "warmup") PageWarm.Stop();
+        PageCoach.Visibility = p == "coach" ? Visibility.Visible : Visibility.Collapsed;
+        if (p == "coach") PageCoach.Refresh();
         PageTuner.Visibility = p == "tuner" ? Visibility.Visible : Visibility.Collapsed;
         PagePiano.Visibility = p == "piano" ? Visibility.Visible : Visibility.Collapsed;
         PageWarm.Visibility = p == "warmup" ? Visibility.Visible : Visibility.Collapsed;
@@ -149,6 +156,7 @@ public partial class MainWindow : Window
         {
             "piano" => "Find your starting note",
             "warmup" => "Warm up with the piano",
+            "coach" => "Feedback on your singing",
             _ => "Sing, check your pitch, record",
         };
     }
@@ -512,6 +520,7 @@ public partial class MainWindow : Window
 
     void UpdateLastTake()
     {
+        PageCoach.Refresh();
         bool show = session != null && reviewWin == null && !Recording;
         LastTakeBtn.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         if (!show) return;
